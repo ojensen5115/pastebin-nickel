@@ -3,6 +3,17 @@ Notable differences from Pastebin Iron:
 
 - the static file handler infers content type from extension, so webupload form is at /webupload.html instead of /webupload
 - BadRequest responses do not carry their set body, but instead simply carry "BadRequest"
+
+
+Performance notes:
+- can handle 7 concurrent connections (2x cores - 1?), down from 25 with Iron
+- `./wrk -c 7 -t 4 -d 30s -R 50000 http://localhost:6767/_____`
+
+TYPE        URI                 NO LOGGING      println!()
+template    /                   31.2k r/s        20k   r/s
+404         /askuuhgfsjfda      31.2k r/s        31.2k r/s
+static      /webupload.html     31.2k r/s        31.1k r/s
+retrieve    /mysrc              124   r/s        124   r/s
 */
 
 #[macro_use] extern crate nickel;
@@ -18,9 +29,9 @@ use nickel::Responder;
 extern crate formdata;
 
 
+extern crate chrono;
 extern crate crypto;
-#[macro_use]
-extern crate lazy_static;
+#[macro_use] extern crate lazy_static;
 extern crate rand;
 extern crate syntect;
 
@@ -35,6 +46,8 @@ use std::io::Write;
 use std::io::Read;
 use std::thread;
 use std::time;
+
+use chrono::{DateTime, UTC};
 
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
@@ -105,7 +118,8 @@ fn main() {
     router.put("/:pasteid/:key", replace);
 
     server.utilize(middleware! { |req|
-        println!("logging request: {:?}", req.origin.uri)
+        let utc: DateTime<UTC> = UTC::now();
+        println!("[{}] [{}]: {}", req.origin.remote_addr, utc.format("%Y-%m-%d %H:%M:%S"), req.origin.uri);
     });
 
     // mimetype inferred from extension
@@ -114,9 +128,11 @@ fn main() {
 
     server.utilize(router);
     // TODO: figure out how to make middleware run after the handler
+    /*
     server.utilize(middleware! {|_, resp|
         println!("response generated");
     });
+    */
 
     // every day, delete pastes > 30 days old
     thread::spawn(move || {
@@ -222,8 +238,6 @@ fn retrieve<'a>(req: &mut Request, mut res: Response<'a>) -> MiddlewareResult<'a
     res.set(MediaType::Txt);
     let id = req.param("pasteid").unwrap();
     let lang = req.param("lang");
-
-    println!("{:?}/{:?}", id, lang);
 
     let mut f = match File::open(format!("uploads/{id}", id = id)) {
         Ok(f) => f,
