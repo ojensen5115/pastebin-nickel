@@ -99,12 +99,11 @@ fn main() {
     router.put("/:pasteid/", replace);
     router.put("/:pasteid/:key", replace);
 
-    /*
     server.utilize(middleware! { |req|
         let utc: DateTime<UTC> = UTC::now();
         println!("[{}] [{}]: {}", req.origin.remote_addr, utc.format("%Y-%m-%d %H:%M:%S"), req.origin.uri);
     });
-    */
+
 
     // mimetype inferred from extension
     // TODO: how to serve static html without ending the URL in .html?
