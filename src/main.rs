@@ -1,21 +1,3 @@
-/*
-Notable differences from Pastebin Iron:
-
-- the static file handler infers content type from extension, so webupload form is at /webupload.html instead of /webupload
-- BadRequest responses do not carry their set body, but instead simply carry "BadRequest"
-
-
-Performance notes:
-- can handle 7 concurrent connections (2x cores - 1?), down from 25 with Iron
-- `./wrk -c 7 -t 4 -d 30s -R 50000 http://localhost:6767/_____`
-
-TYPE        URI                 NO LOGGING      println!()
-template    /                   31.2k r/s        20k   r/s
-404         /askuuhgfsjfda      31.2k r/s        31.2k r/s
-static      /webupload.html     31.2k r/s        31.1k r/s
-retrieve    /mysrc              124   r/s        124   r/s
-*/
-
 #[macro_use] extern crate nickel;
 
 use nickel::Nickel;
@@ -117,10 +99,12 @@ fn main() {
     router.put("/:pasteid/", replace);
     router.put("/:pasteid/:key", replace);
 
+    /*
     server.utilize(middleware! { |req|
         let utc: DateTime<UTC> = UTC::now();
         println!("[{}] [{}]: {}", req.origin.remote_addr, utc.format("%Y-%m-%d %H:%M:%S"), req.origin.uri);
     });
+    */
 
     // mimetype inferred from extension
     // TODO: how to serve static html without ending the URL in .html?
